@@ -1,0 +1,8 @@
+[package]
+name = "log"
+version = "0.1.0"
+authors = ["Spencer Sellers <spencesellers@gmail.com>"]
+
+[dependencies]
+time = "*"
+regex = "*"
