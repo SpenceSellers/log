@@ -26,7 +26,6 @@ impl Entry {
 
 impl fmt::Display for Entry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = String::new();
         write!(f, "{}", self.encoded())
     }
 }
@@ -71,13 +70,6 @@ fn parse_date(s: &str) -> Option<Tm> {
 
 
 fn main() {
-    // let e = Entry {
-    //     date: time::now(),
-    //     group: "general".to_string(),
-    //     content: "U sux forever".to_string()
-    // };
-    //
-    // e.write(&mut std::io::stdout());
 
     let journal = Journal::from_str(
         "**| 2016-05-20 @prog
