@@ -1,5 +1,8 @@
 use std::fmt;
-use std::fmt::Write;
+use std::fmt::Write as FmtWrite;
+use std::env;
+use std::io::{self, Read, Write};
+use std::fs::{OpenOptions};
 
 
 extern crate time;
@@ -8,6 +11,11 @@ use time::Tm;
 extern crate regex;
 use regex::Regex;
 
+extern crate getopts;
+use getopts::Options;
+
+const JOURNAL_FILE: &'static str =  "journal.txt";
+const JOURNAL_BACKUP: &'static str = "journal.txt.bak";
 
 struct Entry {
     date: Tm,
@@ -21,6 +29,14 @@ impl Entry {
         let mut sink = String::new();
         write!(&mut sink, "**| {} @{}:\n{}\n\n", time_s, self.group, self.content).unwrap();
         return sink;
+    }
+
+    fn new_now(group: String, content: String) -> Self {
+        Entry {
+            date: time::now(),
+            group: group,
+            content: content
+        }
     }
 }
 
@@ -71,10 +87,49 @@ fn parse_date(s: &str) -> Option<Tm> {
 
 fn main() {
 
-    let journal = Journal::from_str(
-        "**| 2016-05-20 @prog
-        U SUX
-        **| 2016-07-10 @general ALSO SUX").unwrap();
+    let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(JOURNAL_FILE).expect("Error opening journal file!");
 
-    println!("{}", journal.encoded());
+    let mut journal = {
+        let mut jstring = String::new();
+        file.read_to_string(&mut jstring).expect("Error reading journal file!");
+        Journal::from_str(&jstring).expect("Error parsing journal!")
+    };
+
+
+
+    let args: Vec<String> = env::args().collect();
+
+    let mut opts = Options::new();
+    opts.optflag("l", "list", "Show log entries");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m }
+        Err(f) => { panic!(f.to_string()) }
+    };
+
+    if matches.opt_present("l") {
+        for entry in &journal.entries {
+            
+        }
+        return;
+    }
+
+    
+
+
+
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).unwrap();
+
+    let group = "general".to_string();
+    let content = buffer;
+    let new_entry = Entry::new_now(group, content);
+
+    journal.entries.push(new_entry);
+
+    file.write(journal.encoded().as_bytes());
 }

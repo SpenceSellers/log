@@ -6,3 +6,4 @@ authors = ["Spencer Sellers <spencesellers@gmail.com>"]
 [dependencies]
 time = "*"
 regex = "*"
+getopts = "*"
