@@ -24,11 +24,9 @@ struct Entry {
 }
 
 impl Entry {
-    fn encoded(&self) -> String {
+    fn encode<W: Write>(&self, mut sink: &mut W) -> std::io::Result<()> {
         let time_s = time::strftime("%F", &self.date).expect("Failed date conversion???");
-        let mut sink = String::new();
-        write!(&mut sink, "**| {} @{}:\n{}\n\n", time_s, self.group, self.content).unwrap();
-        return sink;
+        write!(&mut sink, "**| {} @{}:\n{}\n\n", time_s, self.group, self.content)
     }
 
     fn new_now(group: String, content: String) -> Self {
@@ -42,7 +40,12 @@ impl Entry {
 
 impl fmt::Display for Entry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.encoded())
+        let mut bytes = Vec::new();
+        self.encode(&mut bytes);
+
+        let s = String::from_utf8(bytes).unwrap();
+
+        write!(f, "{}", s)
     }
 }
 
@@ -71,12 +74,11 @@ impl Journal {
         return Some(Journal::from_entries(entries));
     }
 
-    fn encoded(&self) -> String {
-        let mut s = String::new();
+    fn encode<W: Write>(&self, sink: &mut W) -> std::io::Result<()> {
         for entry in &self.entries {
-            s.push_str(&entry.encoded());
+            try!(entry.encode(sink));
         }
-        return s;
+        return Ok(());
     }
 }
 
@@ -131,5 +133,5 @@ fn main() {
 
     journal.entries.push(new_entry);
 
-    file.write(journal.encoded().as_bytes());
+    journal.encode(&mut file);
 }
