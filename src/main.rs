@@ -1,6 +1,5 @@
 use std::fmt;
-use std::fmt::Write as FmtWrite;
-use std::env;
+//use std::fmt::Write as FmtWrite;
 use std::io::{self, Read, Write};
 use std::fs::{OpenOptions};
 
@@ -27,8 +26,7 @@ struct Entry {
 
 impl Entry {
     fn encode<W: Write>(&self, mut sink: &mut W) -> std::io::Result<()> {
-        let time_s = time::strftime("%F", &self.date).expect("Failed date conversion???");
-        write!(&mut sink, "**| {} @{}:\n{}\n\n", time_s, self.group, self.content)
+        write!(&mut sink, "**| {} @{}:\n{}\n\n", string_date(&self.date), self.group, self.content)
     }
 
     fn new_now(group: String, content: String) -> Self {
@@ -43,7 +41,7 @@ impl Entry {
 impl fmt::Display for Entry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut bytes = Vec::new();
-        self.encode(&mut bytes);
+        self.encode(&mut bytes).unwrap();
 
         let s = String::from_utf8(bytes).unwrap();
 
@@ -88,6 +86,10 @@ fn parse_date(s: &str) -> Option<Tm> {
     time::strptime(s, "%F").ok()
 }
 
+fn string_date(date: &Tm) -> String {
+    time::strftime("%F", date).expect("Failed date conversion???")
+}
+
 fn shallow_copy<'a, T> (source: &'a Vec<T>) -> Vec<&'a T> {
     let mut v = Vec::new();
     for item in source {
@@ -105,6 +107,24 @@ fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Ent
     }
 
     return entries;
+}
+
+fn compose_entry_content() -> String {
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).unwrap();
+    return buffer;
+}
+
+fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
+    let group = group.unwrap_or_else(|| "general".to_string());
+    let date = date.unwrap_or_else(|| time::now());
+    let content = compose_entry_content();
+    
+    Entry {
+        group: group,
+        date: date,
+        content: content
+    }
 }
 
 fn main() {
@@ -145,12 +165,9 @@ fn main() {
         return;
     }
 
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer).unwrap();
+    
 
-    let group = "general".to_string();
-    let content = buffer;
-    let new_entry = Entry::new_now(group, content);
+    let new_entry = compose_entry(None, None);
 
     journal.entries.push(new_entry);
 
