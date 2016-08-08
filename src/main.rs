@@ -59,7 +59,7 @@ impl Journal {
     }
 
     fn from_str(s: &str) -> Option<Journal> {
-        let re = Regex::new(r"\*\*\|\s+(\d{4}-\d{2}-\d{2})\s+@(\w+)\s+(.*)").unwrap();
+        let re = Regex::new(r"\*\*\|\s+(\d{4}-\d{2}-\d{2})\s+@(\w+)\s*:\s+(.*)").unwrap();
         let caps = re.captures_iter(s);
 
         let mut entries = Vec::new();
@@ -86,6 +86,24 @@ fn parse_date(s: &str) -> Option<Tm> {
     time::strptime(s, "%F").ok()
 }
 
+fn shallow_copy<'a, T> (source: &'a Vec<T>) -> Vec<&'a T> {
+    let mut v = Vec::new();
+    for item in source {
+        v.push(item);
+    }
+    return v;
+}
+
+
+fn selected_entries<'a> (args: &getopts::Matches, journal: &'a Journal) -> Vec<&'a Entry> {
+    let mut entries = shallow_copy(&journal.entries);
+
+    if let Some(group_str) = args.opt_str("group") {
+        entries.retain(|e| e.group == group_str);
+    }
+    
+    return entries;
+}
 
 fn main() {
 
@@ -102,11 +120,11 @@ fn main() {
     };
 
 
-
     let args: Vec<String> = env::args().collect();
 
     let mut opts = Options::new();
     opts.optflag("l", "list", "Show log entries");
+    opts.optopt("g", "group", "Refine to group", "GROUP");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -114,15 +132,13 @@ fn main() {
     };
 
     if matches.opt_present("l") {
-        for entry in &journal.entries {
-            
+
+        let entries = selected_entries(&matches, &journal);
+        for entry in &entries {
+            entry.encode(&mut io::stdout()).unwrap();
         }
         return;
     }
-
-    
-
-
 
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
@@ -133,5 +149,5 @@ fn main() {
 
     journal.entries.push(new_entry);
 
-    journal.encode(&mut file);
+    journal.encode(&mut file).expect("Error writing file!");
 }
