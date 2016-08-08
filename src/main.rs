@@ -1,94 +1,20 @@
-use std::fmt;
-//use std::fmt::Write as FmtWrite;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::fs::{OpenOptions};
-
 
 extern crate time;
 use time::Tm;
 
-extern crate regex;
-use regex::Regex;
-
 extern crate clap;
 use clap::{Arg, App, ArgMatches};
+
+mod journal;
+use journal::*;
 
 
 
 const JOURNAL_FILE: &'static str =  "journal.txt";
 const JOURNAL_BACKUP: &'static str = "journal.txt.bak";
 
-struct Entry {
-    date: Tm,
-    group: String,
-    content: String,
-}
-
-impl Entry {
-    fn encode<W: Write>(&self, mut sink: &mut W) -> std::io::Result<()> {
-        write!(&mut sink, "**| {} @{}:\n{}\n\n", string_date(&self.date), self.group, self.content)
-    }
-
-    fn new_now(group: String, content: String) -> Self {
-        Entry {
-            date: time::now(),
-            group: group,
-            content: content
-        }
-    }
-}
-
-impl fmt::Display for Entry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut bytes = Vec::new();
-        self.encode(&mut bytes).unwrap();
-
-        let s = String::from_utf8(bytes).unwrap();
-
-        write!(f, "{}", s)
-    }
-}
-
-struct Journal {
-    entries: Vec<Entry>
-}
-
-impl Journal {
-    fn from_entries(v: Vec<Entry>) -> Self {
-        Journal {entries: v}
-    }
-
-    fn from_str(s: &str) -> Option<Journal> {
-        let re = Regex::new(r"\*\*\|\s+(\d{4}-\d{2}-\d{2})\s+@(\w+)\s*:\s+(.*)").unwrap();
-        let caps = re.captures_iter(s);
-
-        let mut entries = Vec::new();
-        for cap in caps {
-            let entry = Entry {
-                date: parse_date(cap.at(1).unwrap()).expect("Bad date!"),
-                group: cap.at(2).unwrap().to_string(),
-                content: cap.at(3).unwrap().to_string()
-            };
-            entries.push(entry);
-        }
-        return Some(Journal::from_entries(entries));
-    }
-
-    fn encode<W: Write>(&self, sink: &mut W) -> std::io::Result<()> {
-        for entry in &self.entries {
-            try!(entry.encode(sink));
-        }
-        return Ok(());
-    }
-}
-
-fn parse_date(s: &str) -> Option<Tm> {
-    time::strptime(s, "%F").ok()
-}
-
-fn string_date(date: &Tm) -> String {
-    time::strftime("%F", date).expect("Failed date conversion???")
-}
 
 fn shallow_copy<'a, T> (source: &'a Vec<T>) -> Vec<&'a T> {
     let mut v = Vec::new();
