@@ -85,10 +85,10 @@ fn main() {
 
     let matches = App::new("Log")
         .setting(clap::AppSettings::TrailingVarArg)
-        .arg(Arg::with_name("list")
-                 .short("l")
-                 .long("list")
-                 .help("Lists previous entries"))
+        .arg(Arg::with_name("show")
+                 .short("s")
+                 .long("show")
+                 .help("Show previous entries"))
         .arg(Arg::with_name("group")
                  .short("g")
                  .long("group")
@@ -100,7 +100,7 @@ fn main() {
 
     
 
-    if matches.is_present("list") {
+    if matches.is_present("show") {
 
         let entries = selected_entries(&matches, &journal);
         for entry in &entries {
@@ -117,17 +117,19 @@ fn main() {
         if trailing.peek().unwrap().starts_with("@") {
             // Args start with group name
             let group = parse_group(trailing.next().unwrap());
-            println!("Group is {}", group);
 
             if trailing.peek().is_none() {
-                println!("Rest is empty");
+                // They've only supplied the group name, they need to compose the rest.
                 compose_entry(Some(group), None)
             } else {
-                unimplemented!()
+                // They've supplied both the group name and the content.
+                let words: Vec<&str> = trailing.collect();
+                Entry::new_now(group, words.join(" "))
             }
 
         } else {
-            unimplemented!()
+            let words: Vec<&str> = trailing.collect();
+            Entry::new_now(parse_group(DEFAULT_GROUP), words.join(" "))
         }
 
     } else {
@@ -136,7 +138,7 @@ fn main() {
 
     
     journal.entries.push(new_entry);
-    println!("Entries after this op: {}", journal.entries.len());
 
     journal.encode(&mut file).expect("Error writing file!");
+    println!("[Entry saved successfully]");
 }
