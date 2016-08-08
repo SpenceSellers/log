@@ -11,8 +11,10 @@ use time::Tm;
 extern crate regex;
 use regex::Regex;
 
-extern crate getopts;
-use getopts::Options;
+extern crate clap;
+use clap::{Arg, App, ArgMatches};
+
+
 
 const JOURNAL_FILE: &'static str =  "journal.txt";
 const JOURNAL_BACKUP: &'static str = "journal.txt.bak";
@@ -95,13 +97,13 @@ fn shallow_copy<'a, T> (source: &'a Vec<T>) -> Vec<&'a T> {
 }
 
 
-fn selected_entries<'a> (args: &getopts::Matches, journal: &'a Journal) -> Vec<&'a Entry> {
+fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
     let mut entries = shallow_copy(&journal.entries);
 
-    if let Some(group_str) = args.opt_str("group") {
+    if let Some(group_str) = args.value_of("group") {
         entries.retain(|e| e.group == group_str);
     }
-    
+
     return entries;
 }
 
@@ -120,18 +122,21 @@ fn main() {
     };
 
 
-    let args: Vec<String> = env::args().collect();
 
-    let mut opts = Options::new();
-    opts.optflag("l", "list", "Show log entries");
-    opts.optopt("g", "group", "Refine to group", "GROUP");
+    let matches = App::new("Log")
+        .arg(Arg::with_name("list")
+                 .short("l")
+                 .long("list")
+                 .help("Lists previous entries"))
+        .arg(Arg::with_name("group")
+                 .short("g")
+                 .long("group")
+                 .takes_value(true))
+        .get_matches();
 
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
-    };
+    
 
-    if matches.opt_present("l") {
+    if matches.is_present("list") {
 
         let entries = selected_entries(&matches, &journal);
         for entry in &entries {
