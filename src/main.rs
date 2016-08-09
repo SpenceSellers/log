@@ -34,16 +34,7 @@ fn parse_group(s: &str) -> String {
 }
 
 
-fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
-    let mut entries = shallow_copy(&journal.entries);
 
-    if let Some(group_str) = args.value_of("group") {
-        let group = parse_group(group_str);
-        entries.retain(|e| e.group == group);
-    }
-
-    return entries;
-}
 
 fn compose_entry_content() -> String {
     println!("Type your entry below: ");
@@ -62,6 +53,25 @@ fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
         date: date,
         content: content
     }
+}
+
+fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
+    let mut entries = shallow_copy(&journal.entries);
+
+    if args.is_present("select_last") {
+        let last = entries.pop();
+        entries.clear();
+        if let Some(last) = last {
+            entries.push(last);
+        }
+    }
+
+    if let Some(group_str) = args.value_of("group") {
+        let group = parse_group(group_str);
+        entries.retain(|e| e.group == group);
+    }
+
+    return entries;
 }
 
 fn main() {
@@ -93,6 +103,8 @@ fn main() {
                  .short("g")
                  .long("group")
                  .takes_value(true))
+        .arg(Arg::with_name("select_last")
+                 .long("last"))
         .arg(Arg::with_name("rest")
                  .index(1)
                  .multiple(true))
