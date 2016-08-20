@@ -10,19 +10,15 @@ use clap::{Arg, App, ArgMatches};
 mod journal;
 use journal::*;
 
+mod util;
+
 
 
 const JOURNAL_FILE: &'static str =  "journal.txt";
 const JOURNAL_BACKUP: &'static str = "journal.txt.bak";
 const DEFAULT_GROUP: &'static str = "general";
 
-fn shallow_copy<'a, T> (source: &'a Vec<T>) -> Vec<&'a T> {
-    let mut v = Vec::new();
-    for item in source {
-        v.push(item);
-    }
-    return v;
-}
+
 
 fn parse_group(s: &str) -> String {
     if s.starts_with("@") {
@@ -56,7 +52,12 @@ fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
 }
 
 fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
-    let mut entries = shallow_copy(&journal.entries);
+    let mut entries = util::shallow_copy(&journal.entries);
+
+    if let Some(group_str) = args.value_of("group") {
+        let group = parse_group(group_str);
+        entries.retain(|e| e.group == group);
+    }
 
     if args.is_present("select_last") {
         let last = entries.pop();
@@ -64,11 +65,6 @@ fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Ent
         if let Some(last) = last {
             entries.push(last);
         }
-    }
-
-    if let Some(group_str) = args.value_of("group") {
-        let group = parse_group(group_str);
-        entries.retain(|e| e.group == group);
     }
 
     return entries;
