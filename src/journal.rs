@@ -2,7 +2,7 @@ extern crate time;
 extern crate regex;
 
 use std::fmt;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
 use time::Tm;
 

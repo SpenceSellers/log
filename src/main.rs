@@ -1,6 +1,7 @@
+#![allow(dead_code)]
+
 use std::io::{self, Read, Seek};
 use std::fs::{OpenOptions, File};
-use std::process::Command;
 
 extern crate time;
 use time::Tm;
@@ -13,15 +14,13 @@ extern crate tempfile;
 mod journal;
 use journal::*;
 
+mod composers;
+
 mod util;
-
-
 
 const JOURNAL_FILE: &'static str =  "journal.txt";
 const JOURNAL_BACKUP: &'static str = "journal.txt.bak";
 const DEFAULT_GROUP: &'static str = "general";
-
-
 
 fn parse_group(s: &str) -> String {
     if s.starts_with("@") {
@@ -32,34 +31,10 @@ fn parse_group(s: &str) -> String {
     }
 }
 
-
-
-
-fn compose_entry_content() -> String {
-    println!("Type your entry below: ");
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer).unwrap();
-    return buffer;
-}
-
-fn compose_entry_content_editor() -> String {
-    let mut file = tempfile::NamedTempFile::new().expect("Could not create temp file");
-    let cmd = Command::new("vim")
-        .arg(file.path().as_os_str())
-        .spawn()
-        .expect("Could not spawn editor")
-        .wait();
-    let mut f: File = file.into();
-    f.seek(std::io::SeekFrom::Start(0)).unwrap();
-    let mut buf = String::new();
-    f.read_to_string(&mut buf).expect("Read error!");
-    return buf;
-}
-
-fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
+fn compose_entry<C: composers::Composer>(group: Option<String>, date: Option<Tm>, composer: &C) -> Entry {
     let group = group.unwrap_or_else(|| DEFAULT_GROUP.to_string());
     let date = date.unwrap_or_else(|| time::now());
-    let content = compose_entry_content_editor();
+    let content = composer.compose().expect("Error composing entry");
     
     Entry {
         group: group,
@@ -67,7 +42,6 @@ fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
         content: content
     }
 }
-
 
 fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
     let mut entries = util::shallow_copy(&journal.entries);
@@ -104,7 +78,7 @@ fn main() {
     };
 
     // If you don't seek to the beginning, new writes could be appended on the end.
-    file.seek(std::io::SeekFrom::Start(0));
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
 
 
     let matches = App::new("Log")
@@ -146,7 +120,7 @@ fn main() {
 
             if trailing.peek().is_none() {
                 // They've only supplied the group name, they need to compose the rest.
-                compose_entry(Some(group), None)
+                compose_entry(Some(group), None, &composers::StdIn)
             } else {
                 // They've supplied both the group name and the content.
                 let words: Vec<&str> = trailing.collect();
@@ -159,7 +133,7 @@ fn main() {
         }
 
     } else {
-        compose_entry(None, None)
+        compose_entry(None, None, &composers::StdIn)
         
     };
 
