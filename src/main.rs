@@ -1,11 +1,14 @@
 use std::io::{self, Read, Seek};
-use std::fs::{OpenOptions};
+use std::fs::{OpenOptions, File};
+use std::process::Command;
 
 extern crate time;
 use time::Tm;
 
 extern crate clap;
 use clap::{Arg, App, ArgMatches};
+
+extern crate tempfile;
 
 mod journal;
 use journal::*;
@@ -39,10 +42,24 @@ fn compose_entry_content() -> String {
     return buffer;
 }
 
+fn compose_entry_content_editor() -> String {
+    let mut file = tempfile::NamedTempFile::new().expect("Could not create temp file");
+    let cmd = Command::new("vim")
+        .arg(file.path().as_os_str())
+        .spawn()
+        .expect("Could not spawn editor")
+        .wait();
+    let mut f: File = file.into();
+    f.seek(std::io::SeekFrom::Start(0)).unwrap();
+    let mut buf = String::new();
+    f.read_to_string(&mut buf).expect("Read error!");
+    return buf;
+}
+
 fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
     let group = group.unwrap_or_else(|| DEFAULT_GROUP.to_string());
     let date = date.unwrap_or_else(|| time::now());
-    let content = compose_entry_content();
+    let content = compose_entry_content_editor();
     
     Entry {
         group: group,
@@ -50,6 +67,7 @@ fn compose_entry(group: Option<String>, date: Option<Tm>) -> Entry {
         content: content
     }
 }
+
 
 fn selected_entries<'a> (args: &ArgMatches, journal: &'a Journal) -> Vec<&'a Entry> {
     let mut entries = util::shallow_copy(&journal.entries);
@@ -142,6 +160,7 @@ fn main() {
 
     } else {
         compose_entry(None, None)
+        
     };
 
     

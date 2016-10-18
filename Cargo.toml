@@ -7,3 +7,4 @@ authors = ["Spencer Sellers <spencesellers@gmail.com>"]
 time = "*"
 regex = "*"
 clap = "*"
+tempfile = "*"
