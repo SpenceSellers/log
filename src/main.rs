@@ -16,6 +16,8 @@ use journal::*;
 
 mod composers;
 
+mod selection;
+
 mod util;
 
 const JOURNAL_FILE: &'static str =  "journal.txt";
@@ -31,7 +33,8 @@ fn parse_group(s: &str) -> String {
     }
 }
 
-fn compose_entry<C: composers::Composer>(group: Option<String>, date: Option<Tm>, composer: &C) -> Entry {
+fn compose_entry<C>(group: Option<String>, date: Option<Tm>, composer: &C) -> Entry 
+    where C: composers::Composer {
     let group = group.unwrap_or_else(|| DEFAULT_GROUP.to_string());
     let date = date.unwrap_or_else(|| time::now());
     let content = composer.compose().expect("Error composing entry");
